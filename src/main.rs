@@ -6,6 +6,8 @@ use good_lp::{
 };
 
 const ENTRIES_NUMBER: usize = 81;
+
+// Coincides with line and column number. Should equal sqrt of ENTRIES_NUMBER.
 const BLOCK_NUMBER: u8 = 9;
 
 #[derive(Debug)]
