@@ -19,12 +19,6 @@ pub enum SudokuBinary {
     Constant(u8),
 }
 
-impl Default for SudokuBinary {
-    fn default() -> Self {
-        SudokuBinary::Constant(1)
-    }
-}
-
 pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], ResolutionError> {
     let mut problem = ProblemVariables::new();
     let entries = parse_sudoku_to_variables(&sudoku);
