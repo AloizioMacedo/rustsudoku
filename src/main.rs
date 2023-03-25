@@ -5,10 +5,12 @@ use good_lp::{
     Solution, SolverModel, Variable,
 };
 
-const ENTRIES_NUMBER: usize = 81;
+const ENTRIES_NUMBER: usize = 16;
 
 // Coincides with line and column number. Should equal sqrt of ENTRIES_NUMBER.
-const BLOCK_NUMBER: u8 = 9;
+const BLOCK_NUMBER: u8 = 4;
+
+const BLOCK_WIDTH: u8 = 2;
 
 #[derive(Debug)]
 pub enum SudokuBinary {
@@ -240,14 +242,14 @@ fn get_column_indices() -> Vec<Vec<usize>> {
 fn get_blocks() -> Vec<Vec<usize>> {
     let mut result = Vec::new();
 
-    for i in 0..3 {
-        for j in 0..3 {
+    for i in 0..BLOCK_WIDTH {
+        for j in 0..BLOCK_WIDTH {
             result.push(
                 (0..BLOCK_NUMBER)
                     .map(|k| {
                         get_index_by_coordinate(
-                            3 * i as usize + k as usize % 3,
-                            3 * j as usize + k as usize / 3,
+                            BLOCK_WIDTH as usize * i as usize + k as usize % BLOCK_WIDTH as usize,
+                            BLOCK_WIDTH as usize * j as usize + k as usize / BLOCK_WIDTH as usize,
                         )
                     })
                     .collect(),
