@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use good_lp::{
-    self, default_solver, variable, Expression, ProblemVariables, ResolutionError, Solution,
-    SolverModel, Variable,
+    self, default_solver, variable, Constraint, Expression, ProblemVariables, ResolutionError,
+    Solution, SolverModel, Variable,
 };
 
 const ENTRIES_NUMBER: usize = 81;
@@ -41,69 +41,28 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
     let mut constraints = Vec::new();
 
     for i in 0..ENTRIES_NUMBER {
-        let expression = (1..=BLOCK_NUMBER).fold(Expression::from(0), |acc, v| {
-            if let Some(x) = variables_map.get(&(v, i)) {
-                acc + x
-            } else {
-                acc + Expression::from(
-                    *const_map
-                        .get(&(v, i))
-                        .expect("Should be inside const_map if not in variables_map.")
-                        as i32,
-                )
-            }
-        });
+        let constraint = get_constraint_of_uniqueness_in_square(&variables_map, i, &const_map);
 
-        constraints.push(expression.eq(1));
+        constraints.push(constraint);
     }
 
     for v in 1..=BLOCK_NUMBER {
         for line in get_lines_indices() {
-            let expression = line.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i)) {
-                    acc + x
-                } else {
-                    acc + Expression::from(
-                        *const_map
-                            .get(&(v, *i))
-                            .expect("Should be inside const_map if not in variables_map.")
-                            as i32,
-                    )
-                }
-            });
-            constraints.push(expression.eq(1));
+            let constraint = get_line_constraint(line, &variables_map, v, &const_map);
+
+            constraints.push(constraint);
         }
 
         for column in get_column_indices() {
-            let expression = column.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i)) {
-                    acc + x
-                } else {
-                    acc + Expression::from(
-                        *const_map
-                            .get(&(v, *i))
-                            .expect("Should be inside const_map if not in variables_map.")
-                            as i32,
-                    )
-                }
-            });
-            constraints.push(expression.eq(1));
+            let constraint = get_column_constraint(column, &variables_map, v, &const_map);
+
+            constraints.push(constraint);
         }
 
         for block in get_blocks() {
-            let expression = block.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i)) {
-                    acc + x
-                } else {
-                    acc + Expression::from(
-                        *const_map
-                            .get(&(v, *i))
-                            .expect("Should be inside const_map if not in variables_map.")
-                            as i32,
-                    )
-                }
-            });
-            constraints.push(expression.eq(1));
+            let constraint = get_block_constraint(block, &variables_map, v, &const_map);
+
+            constraints.push(constraint);
         }
     }
 
@@ -136,6 +95,93 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
     }
 
     Ok(result)
+}
+
+/// Creates constraint that makes the given block have only non-repeated values.
+fn get_block_constraint(
+    block: Vec<usize>,
+    variables_map: &HashMap<(u8, usize), Variable>,
+    v: u8,
+    const_map: &HashMap<(u8, usize), u8>,
+) -> Constraint {
+    let expression = block.iter().fold(Expression::from(0), |acc, i| {
+        if let Some(x) = variables_map.get(&(v, *i)) {
+            acc + x
+        } else {
+            acc + Expression::from(
+                *const_map
+                    .get(&(v, *i))
+                    .expect("Should be inside const_map if not in variables_map.")
+                    as i32,
+            )
+        }
+    });
+    expression.eq(1)
+}
+
+/// Creates constraint that makes the given column have only non-repeated values.
+fn get_column_constraint(
+    column: Vec<usize>,
+    variables_map: &HashMap<(u8, usize), Variable>,
+    v: u8,
+    const_map: &HashMap<(u8, usize), u8>,
+) -> Constraint {
+    let expression = column.iter().fold(Expression::from(0), |acc, i| {
+        if let Some(x) = variables_map.get(&(v, *i)) {
+            acc + x
+        } else {
+            acc + Expression::from(
+                *const_map
+                    .get(&(v, *i))
+                    .expect("Should be inside const_map if not in variables_map.")
+                    as i32,
+            )
+        }
+    });
+    expression.eq(1)
+}
+
+/// Creates constraint that makes the given line have only non-repeated values.
+fn get_line_constraint(
+    line: Vec<usize>,
+    variables_map: &HashMap<(u8, usize), Variable>,
+    v: u8,
+    const_map: &HashMap<(u8, usize), u8>,
+) -> Constraint {
+    let expression = line.iter().fold(Expression::from(0), |acc, i| {
+        if let Some(x) = variables_map.get(&(v, *i)) {
+            acc + x
+        } else {
+            acc + Expression::from(
+                *const_map
+                    .get(&(v, *i))
+                    .expect("Should be inside const_map if not in variables_map.")
+                    as i32,
+            )
+        }
+    });
+    expression.eq(1)
+}
+
+/// Creates constraint that makes a given square have an unique value.
+fn get_constraint_of_uniqueness_in_square(
+    variables_map: &HashMap<(u8, usize), Variable>,
+    i: usize,
+    const_map: &HashMap<(u8, usize), u8>,
+) -> Constraint {
+    let expression = (1..=BLOCK_NUMBER).fold(Expression::from(0), |acc, v| {
+        if let Some(x) = variables_map.get(&(v, i)) {
+            acc + x
+        } else {
+            acc + Expression::from(
+                *const_map
+                    .get(&(v, i))
+                    .expect("Should be inside const_map if not in variables_map.")
+                    as i32,
+            )
+        }
+    });
+    expression.eq(1)
 }
 
 pub fn parse_sudoku_to_variables(arr: &[u8; ENTRIES_NUMBER]) -> HashMap<(u8, usize), SudokuBinary> {
