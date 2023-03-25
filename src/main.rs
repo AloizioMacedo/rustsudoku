@@ -21,7 +21,7 @@ pub enum SudokuBinary {
 
 pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], ResolutionError> {
     let mut problem = ProblemVariables::new();
-    let entries = parse_sudoku_to_variables(&sudoku);
+    let entries = parse_sudoku_to_variables(sudoku);
 
     let mut variables_map: HashMap<(u8, usize), Variable> = HashMap::new();
     let mut const_map: HashMap<(u8, usize), u8> = HashMap::new();
@@ -73,27 +73,27 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
 
     let solution = base_problem.solve()?;
 
-    let mut result = [255; ENTRIES_NUMBER];
+    let mut results = [255; ENTRIES_NUMBER];
 
-    for i in 0..ENTRIES_NUMBER {
+    for (i, result) in results.iter_mut().enumerate() {
         for v in 1..=BLOCK_NUMBER {
             if let Some(x) = variables_map.get(&(v, i)) {
                 let binary_value = solution.value(*x);
                 if binary_value == 1. {
-                    result[i as usize] = v;
+                    *result = v;
                 }
             } else {
                 let binary_value = const_map
                     .get(&(v, i))
                     .expect("Should be inside const_map if not in variables_map.");
                 if *binary_value == 1 {
-                    result[i as usize] = v;
+                    *result = v;
                 }
             }
         }
     }
 
-    Ok(result)
+    Ok(results)
 }
 
 /// Creates constraint that makes the given block have only non-repeated values.
@@ -186,17 +186,17 @@ fn get_constraint_of_uniqueness_in_square(
 pub fn parse_sudoku_to_variables(arr: &[u8; ENTRIES_NUMBER]) -> HashMap<(u8, usize), SudokuBinary> {
     let mut variables = HashMap::new();
     for possible_value in 1..=BLOCK_NUMBER {
-        for k in 0..ENTRIES_NUMBER {
-            let value_at_k = arr[k];
+        for (k, number) in arr.iter().enumerate() {
+            let value_at_k = *number;
             if value_at_k == 0 {
                 variables.insert(
-                    (possible_value as u8, k),
+                    (possible_value, k),
                     SudokuBinary::Variable(variable().binary()),
                 );
-            } else if value_at_k == possible_value as u8 {
-                variables.insert((possible_value as u8, k), SudokuBinary::Constant(1));
+            } else if value_at_k == possible_value {
+                variables.insert((possible_value, k), SudokuBinary::Constant(1));
             } else if value_at_k < 10 {
-                variables.insert((possible_value as u8, k), SudokuBinary::Constant(0));
+                variables.insert((possible_value, k), SudokuBinary::Constant(0));
             } else {
                 panic!();
             }
@@ -272,9 +272,9 @@ pub fn generate_random_sudoku() -> [u8; ENTRIES_NUMBER] {
     let sudoku = [0; ENTRIES_NUMBER];
     let mut solved = solve(&sudoku).expect("Should be able to solve an empty sudoku.");
 
-    for i in 0..ENTRIES_NUMBER {
+    for item in solved.iter_mut() {
         if rand::thread_rng().gen_bool(0.6) {
-            solved[i] = 0
+            *item = 0
         }
     }
 
