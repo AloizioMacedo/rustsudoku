@@ -5,6 +5,9 @@ use good_lp::{
     SolverModel, Variable,
 };
 
+const ENTRIES_NUMBER: usize = 81;
+const BLOCK_NUMBER: u8 = 9;
+
 #[derive(Debug)]
 pub enum SudokuBinary {
     Variable(good_lp::VariableDefinition),
@@ -17,12 +20,12 @@ impl Default for SudokuBinary {
     }
 }
 
-pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
+pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], ResolutionError> {
     let mut problem = ProblemVariables::new();
     let entries = parse_sudoku_to_variables(&sudoku);
 
-    let mut variables_map: HashMap<(u8, u8), Variable> = HashMap::new();
-    let mut const_map: HashMap<(u8, u8), u8> = HashMap::new();
+    let mut variables_map: HashMap<(u8, usize), Variable> = HashMap::new();
+    let mut const_map: HashMap<(u8, usize), u8> = HashMap::new();
 
     for (i, entry) in entries.into_iter() {
         match entry {
@@ -37,14 +40,14 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
 
     let mut constraints = Vec::new();
 
-    for i in 0..81 {
-        let expression = (1..=9).fold(Expression::from(0), |acc, v| {
-            if let Some(x) = variables_map.get(&(v, i as u8)) {
+    for i in 0..ENTRIES_NUMBER {
+        let expression = (1..=BLOCK_NUMBER).fold(Expression::from(0), |acc, v| {
+            if let Some(x) = variables_map.get(&(v, i)) {
                 acc + x
             } else {
                 acc + Expression::from(
                     *const_map
-                        .get(&(v, i as u8))
+                        .get(&(v, i))
                         .expect("Should be inside const_map if not in variables_map.")
                         as i32,
                 )
@@ -54,15 +57,15 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
         constraints.push(expression.eq(1));
     }
 
-    for v in 1..=9 {
+    for v in 1..=BLOCK_NUMBER {
         for line in get_lines_indices() {
             let expression = line.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i as u8)) {
+                if let Some(x) = variables_map.get(&(v, *i)) {
                     acc + x
                 } else {
                     acc + Expression::from(
                         *const_map
-                            .get(&(v, *i as u8))
+                            .get(&(v, *i))
                             .expect("Should be inside const_map if not in variables_map.")
                             as i32,
                     )
@@ -73,12 +76,12 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
 
         for column in get_column_indices() {
             let expression = column.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i as u8)) {
+                if let Some(x) = variables_map.get(&(v, *i)) {
                     acc + x
                 } else {
                     acc + Expression::from(
                         *const_map
-                            .get(&(v, *i as u8))
+                            .get(&(v, *i))
                             .expect("Should be inside const_map if not in variables_map.")
                             as i32,
                     )
@@ -89,12 +92,12 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
 
         for block in get_blocks() {
             let expression = block.iter().fold(Expression::from(0), |acc, i| {
-                if let Some(x) = variables_map.get(&(v, *i as u8)) {
+                if let Some(x) = variables_map.get(&(v, *i)) {
                     acc + x
                 } else {
                     acc + Expression::from(
                         *const_map
-                            .get(&(v, *i as u8))
+                            .get(&(v, *i))
                             .expect("Should be inside const_map if not in variables_map.")
                             as i32,
                     )
@@ -112,10 +115,10 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
 
     let solution = base_problem.solve()?;
 
-    let mut result = [255; 81];
+    let mut result = [255; ENTRIES_NUMBER];
 
-    for i in 0..81 {
-        for v in 1..=9 {
+    for i in 0..ENTRIES_NUMBER {
+        for v in 1..=BLOCK_NUMBER {
             if let Some(x) = variables_map.get(&(v, i)) {
                 let binary_value = solution.value(*x);
                 if binary_value == 1. {
@@ -135,20 +138,20 @@ pub fn solve(sudoku: &[u8; 81]) -> Result<[u8; 81], ResolutionError> {
     Ok(result)
 }
 
-pub fn parse_sudoku_to_variables(arr: &[u8; 81]) -> HashMap<(u8, u8), SudokuBinary> {
+pub fn parse_sudoku_to_variables(arr: &[u8; ENTRIES_NUMBER]) -> HashMap<(u8, usize), SudokuBinary> {
     let mut variables = HashMap::new();
-    for possible_value in 1..=9 {
-        for k in 0..81 {
+    for possible_value in 1..=BLOCK_NUMBER {
+        for k in 0..ENTRIES_NUMBER {
             let value_at_k = arr[k];
             if value_at_k == 0 {
                 variables.insert(
-                    (possible_value as u8, k as u8),
+                    (possible_value as u8, k),
                     SudokuBinary::Variable(variable().binary()),
                 );
             } else if value_at_k == possible_value as u8 {
-                variables.insert((possible_value as u8, k as u8), SudokuBinary::Constant(1));
+                variables.insert((possible_value as u8, k), SudokuBinary::Constant(1));
             } else if value_at_k < 10 {
-                variables.insert((possible_value as u8, k as u8), SudokuBinary::Constant(0));
+                variables.insert((possible_value as u8, k), SudokuBinary::Constant(0));
             } else {
                 panic!();
             }
@@ -161,8 +164,12 @@ pub fn parse_sudoku_to_variables(arr: &[u8; 81]) -> HashMap<(u8, u8), SudokuBina
 fn get_lines_indices() -> Vec<Vec<usize>> {
     let mut result = Vec::new();
 
-    for k in 0..9 {
-        result.push((0..9).map(|i| 9 * k + i).collect());
+    for k in 0..BLOCK_NUMBER {
+        result.push(
+            (0..BLOCK_NUMBER)
+                .map(|i| (BLOCK_NUMBER * k + i) as usize)
+                .collect(),
+        );
     }
 
     result
@@ -171,8 +178,12 @@ fn get_lines_indices() -> Vec<Vec<usize>> {
 fn get_column_indices() -> Vec<Vec<usize>> {
     let mut result = Vec::new();
 
-    for k in 0..9 {
-        result.push((0..9).map(|i| k + 9 * i).collect());
+    for k in 0..BLOCK_NUMBER {
+        result.push(
+            (0..BLOCK_NUMBER)
+                .map(|i| (k + BLOCK_NUMBER * i) as usize)
+                .collect(),
+        );
     }
 
     result
@@ -184,8 +195,13 @@ fn get_blocks() -> Vec<Vec<usize>> {
     for i in 0..3 {
         for j in 0..3 {
             result.push(
-                (0..9)
-                    .map(|k| get_index_by_coordinate(3 * i + k % 3, 3 * j + k / 3))
+                (0..BLOCK_NUMBER)
+                    .map(|k| {
+                        get_index_by_coordinate(
+                            3 * i as usize + k as usize % 3,
+                            3 * j as usize + k as usize / 3,
+                        )
+                    })
                     .collect(),
             )
         }
@@ -195,12 +211,15 @@ fn get_blocks() -> Vec<Vec<usize>> {
 }
 
 fn get_index_by_coordinate(x: usize, y: usize) -> usize {
-    x + 9 * y
+    x + (BLOCK_NUMBER as usize) * y
 }
 
-pub fn print_as_sudoku(sudoku: &[u8; 81]) {
-    for i in 0..9 {
-        println!("{:?}", &sudoku[9 * i..9 * (i + 1)])
+pub fn print_as_sudoku(sudoku: &[u8; ENTRIES_NUMBER]) {
+    for i in 0..BLOCK_NUMBER {
+        println!(
+            "{:?}",
+            &sudoku[BLOCK_NUMBER as usize * i as usize..BLOCK_NUMBER as usize * (i as usize + 1)]
+        )
     }
 }
 
