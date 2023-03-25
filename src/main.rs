@@ -4,13 +4,14 @@ use good_lp::{
     self, default_solver, variable, Constraint, Expression, ProblemVariables, ResolutionError,
     Solution, SolverModel, Variable,
 };
+use rand::Rng;
 
-const ENTRIES_NUMBER: usize = 16;
+const ENTRIES_NUMBER: usize = 81;
 
 // Coincides with line and column number. Should equal sqrt of ENTRIES_NUMBER.
-const BLOCK_NUMBER: u8 = 4;
+const BLOCK_NUMBER: u8 = 9;
 
-const BLOCK_WIDTH: u8 = 2;
+const BLOCK_WIDTH: u8 = 3;
 
 #[derive(Debug)]
 pub enum SudokuBinary {
