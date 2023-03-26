@@ -1,8 +1,9 @@
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
 
 use good_lp::{
-    self, default_solver, variable, Constraint, Expression, ProblemVariables, ResolutionError,
-    Solution, SolverModel, Variable,
+    default_solver, variable, Constraint, Expression, ProblemVariables, Solution, SolverModel,
+    Variable,
 };
 use rand::Rng;
 
@@ -19,7 +20,8 @@ pub enum SudokuBinary {
     Constant(u8),
 }
 
-pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], ResolutionError> {
+#[wasm_bindgen]
+pub fn solve(sudoku: &[u8]) -> Vec<u8> {
     let mut problem = ProblemVariables::new();
     let (variables_map, const_map) = build_variables_and_constants(sudoku, &mut problem);
 
@@ -31,11 +33,11 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
         base_problem = base_problem.with(constraint);
     }
 
-    let solution = base_problem.solve()?;
+    let solution = base_problem.solve().expect("Should be solvable.");
 
     let results = get_results(variables_map, const_map, solution);
 
-    Ok(results)
+    results.to_vec()
 }
 
 fn get_results(
@@ -103,7 +105,7 @@ fn build_constraints(
 }
 
 fn build_variables_and_constants(
-    sudoku: &[u8; ENTRIES_NUMBER],
+    sudoku: &[u8],
     problem: &mut ProblemVariables,
 ) -> (HashMap<(u8, usize), Variable>, HashMap<(u8, usize), u8>) {
     let entries = parse_sudoku_to_variables(sudoku);
@@ -167,7 +169,7 @@ fn get_constraint_of_uniqueness_in_square(
     expression.eq(1)
 }
 
-pub fn parse_sudoku_to_variables(arr: &[u8; ENTRIES_NUMBER]) -> HashMap<(u8, usize), SudokuBinary> {
+pub fn parse_sudoku_to_variables(arr: &[u8]) -> HashMap<(u8, usize), SudokuBinary> {
     let mut variables = HashMap::new();
     for possible_value in 1..=BLOCK_NUMBER {
         for (k, number) in arr.iter().enumerate() {
@@ -243,7 +245,7 @@ fn get_index_by_coordinate(x: usize, y: usize) -> usize {
     x + (BLOCK_NUMBER as usize) * y
 }
 
-pub fn print_as_sudoku(sudoku: &[u8; ENTRIES_NUMBER]) {
+pub fn print_as_sudoku(sudoku: &[u8]) {
     for i in 0..BLOCK_NUMBER {
         println!(
             "{:?}",
@@ -252,9 +254,9 @@ pub fn print_as_sudoku(sudoku: &[u8; ENTRIES_NUMBER]) {
     }
 }
 
-pub fn generate_random_sudoku() -> [u8; ENTRIES_NUMBER] {
+pub fn generate_random_sudoku() -> Vec<u8> {
     let sudoku = [0; ENTRIES_NUMBER];
-    let mut solved = solve(&sudoku).expect("Should be able to solve an empty sudoku.");
+    let mut solved = solve(&sudoku);
 
     for item in solved.iter_mut() {
         if rand::thread_rng().gen_bool(0.6) {
@@ -263,10 +265,6 @@ pub fn generate_random_sudoku() -> [u8; ENTRIES_NUMBER] {
     }
 
     solved
-}
-
-fn main() {
-    println!("Hello, world!");
 }
 
 #[cfg(test)]
@@ -301,7 +299,7 @@ mod tests {
         let sudoku = generate_random_sudoku();
         print_as_sudoku(&sudoku);
 
-        let result = solve(&sudoku).unwrap();
+        let result = solve(&sudoku);
         print_as_sudoku(&result);
     }
 }
