@@ -21,52 +21,9 @@ pub enum SudokuBinary {
 
 pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], ResolutionError> {
     let mut problem = ProblemVariables::new();
-    let entries = parse_sudoku_to_variables(sudoku);
+    let (variables_map, const_map) = build_variables_and_constants(sudoku, &mut problem);
 
-    let mut variables_map: HashMap<(u8, usize), Variable> = HashMap::new();
-    let mut const_map: HashMap<(u8, usize), u8> = HashMap::new();
-
-    for (i, entry) in entries.into_iter() {
-        match entry {
-            SudokuBinary::Variable(x) => {
-                variables_map.insert(i, problem.add(x));
-            }
-            SudokuBinary::Constant(x) => {
-                const_map.insert(i, x);
-            }
-        }
-    }
-
-    let mut constraints = Vec::new();
-
-    for i in 0..ENTRIES_NUMBER {
-        let constraint = get_constraint_of_uniqueness_in_square(&variables_map, i, &const_map);
-
-        constraints.push(constraint);
-    }
-
-    for v in 1..=BLOCK_NUMBER {
-        for line in get_lines_indices() {
-            let constraint =
-                get_constraint_of_only_one_v_in_container(&line, &variables_map, v, &const_map);
-
-            constraints.push(constraint);
-        }
-
-        for column in get_column_indices() {
-            let constraint =
-                get_constraint_of_only_one_v_in_container(&column, &variables_map, v, &const_map);
-
-            constraints.push(constraint);
-        }
-
-        for block in get_blocks() {
-            let constraint =
-                get_constraint_of_only_one_v_in_container(&block, &variables_map, v, &const_map);
-
-            constraints.push(constraint);
-        }
-    }
+    let constraints = build_constraints(&variables_map, &const_map);
 
     let mut base_problem = problem.maximise(Expression::from(0)).using(default_solver);
 
@@ -76,6 +33,16 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
 
     let solution = base_problem.solve()?;
 
+    let results = get_results(variables_map, const_map, solution);
+
+    Ok(results)
+}
+
+fn get_results(
+    variables_map: HashMap<(u8, usize), Variable>,
+    const_map: HashMap<(u8, usize), u8>,
+    solution: good_lp::solvers::coin_cbc::CoinCbcSolution,
+) -> [u8; ENTRIES_NUMBER] {
     let mut results = [255; ENTRIES_NUMBER];
 
     for (i, result) in results.iter_mut().enumerate() {
@@ -95,8 +62,66 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
             }
         }
     }
+    results
+}
 
-    Ok(results)
+fn build_constraints(
+    variables_map: &HashMap<(u8, usize), Variable>,
+    const_map: &HashMap<(u8, usize), u8>,
+) -> Vec<Constraint> {
+    let mut constraints = Vec::new();
+
+    for i in 0..ENTRIES_NUMBER {
+        let constraint = get_constraint_of_uniqueness_in_square(variables_map, i, const_map);
+
+        constraints.push(constraint);
+    }
+
+    for v in 1..=BLOCK_NUMBER {
+        for line in get_lines_indices() {
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&line, variables_map, v, const_map);
+
+            constraints.push(constraint);
+        }
+
+        for column in get_column_indices() {
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&column, variables_map, v, const_map);
+
+            constraints.push(constraint);
+        }
+
+        for block in get_blocks() {
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&block, variables_map, v, const_map);
+
+            constraints.push(constraint);
+        }
+    }
+    constraints
+}
+
+fn build_variables_and_constants(
+    sudoku: &[u8; ENTRIES_NUMBER],
+    problem: &mut ProblemVariables,
+) -> (HashMap<(u8, usize), Variable>, HashMap<(u8, usize), u8>) {
+    let entries = parse_sudoku_to_variables(sudoku);
+
+    let mut variables_map: HashMap<(u8, usize), Variable> = HashMap::new();
+    let mut const_map: HashMap<(u8, usize), u8> = HashMap::new();
+
+    for (i, entry) in entries.into_iter() {
+        match entry {
+            SudokuBinary::Variable(x) => {
+                variables_map.insert(i, problem.add(x));
+            }
+            SudokuBinary::Constant(x) => {
+                const_map.insert(i, x);
+            }
+        }
+    }
+    (variables_map, const_map)
 }
 
 /// Creates constraint that makes the given container have only one value v.
