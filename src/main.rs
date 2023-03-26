@@ -47,19 +47,22 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
 
     for v in 1..=BLOCK_NUMBER {
         for line in get_lines_indices() {
-            let constraint = get_line_constraint(line, &variables_map, v, &const_map);
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&line, &variables_map, v, &const_map);
 
             constraints.push(constraint);
         }
 
         for column in get_column_indices() {
-            let constraint = get_column_constraint(column, &variables_map, v, &const_map);
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&column, &variables_map, v, &const_map);
 
             constraints.push(constraint);
         }
 
         for block in get_blocks() {
-            let constraint = get_block_constraint(block, &variables_map, v, &const_map);
+            let constraint =
+                get_constraint_of_only_one_v_in_container(&block, &variables_map, v, &const_map);
 
             constraints.push(constraint);
         }
@@ -96,58 +99,14 @@ pub fn solve(sudoku: &[u8; ENTRIES_NUMBER]) -> Result<[u8; ENTRIES_NUMBER], Reso
     Ok(results)
 }
 
-/// Creates constraint that makes the given block have only non-repeated values.
-fn get_block_constraint(
-    block: Vec<usize>,
-    variables_map: &HashMap<(u8, usize), Variable>,
-    v: u8,
-    const_map: &HashMap<(u8, usize), u8>,
-) -> Constraint {
-    let expression = block.iter().fold(Expression::from(0), |acc, i| {
-        if let Some(x) = variables_map.get(&(v, *i)) {
-            acc + x
-        } else {
-            acc + Expression::from(
-                *const_map
-                    .get(&(v, *i))
-                    .expect("Should be inside const_map if not in variables_map.")
-                    as i32,
-            )
-        }
-    });
-    expression.eq(1)
-}
-
-/// Creates constraint that makes the given column have only non-repeated values.
-fn get_column_constraint(
-    column: Vec<usize>,
+/// Creates constraint that makes the given container have only one value v.
+fn get_constraint_of_only_one_v_in_container(
+    column: &[usize],
     variables_map: &HashMap<(u8, usize), Variable>,
     v: u8,
     const_map: &HashMap<(u8, usize), u8>,
 ) -> Constraint {
     let expression = column.iter().fold(Expression::from(0), |acc, i| {
-        if let Some(x) = variables_map.get(&(v, *i)) {
-            acc + x
-        } else {
-            acc + Expression::from(
-                *const_map
-                    .get(&(v, *i))
-                    .expect("Should be inside const_map if not in variables_map.")
-                    as i32,
-            )
-        }
-    });
-    expression.eq(1)
-}
-
-/// Creates constraint that makes the given line have only non-repeated values.
-fn get_line_constraint(
-    line: Vec<usize>,
-    variables_map: &HashMap<(u8, usize), Variable>,
-    v: u8,
-    const_map: &HashMap<(u8, usize), u8>,
-) -> Constraint {
-    let expression = line.iter().fold(Expression::from(0), |acc, i| {
         if let Some(x) = variables_map.get(&(v, *i)) {
             acc + x
         } else {
