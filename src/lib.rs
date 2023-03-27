@@ -272,29 +272,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_sudoku_81() {
-        // let sudoku = [
-        //     0, 0, 2, 0, 5, 0, 0, 0, 6, 0, 0, 0, 0, 0, 4, 0, 7, 0, 1, 0, 8, 0, 9, 0, 0, 0, 0, 0, 0,
-        //     0, 7, 0, 6, 0, 8, 0, 7, 0, 6, 0, 0, 0, 2, 0, 4, 0, 8, 0, 5, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-        //     1, 0, 3, 0, 8, 0, 9, 0, 4, 0, 0, 0, 0, 0, 8, 0, 0, 0, 2, 0, 4, 0, 0,
-        // ];
-
-        // print_as_sudoku(&sudoku);
-
-        // let result = solve(&sudoku).unwrap();
-        // print_as_sudoku(&result);
-    }
-
-    #[test]
-    fn test_sudoku_16() {
-        // let sudoku = [1, 0, 2, 0, 4, 0, 0, 3, 0, 4, 0, 0, 3, 0, 4, 2];
-        // print_as_sudoku(&sudoku);
-
-        // let result = solve(&sudoku).unwrap();
-        // print_as_sudoku(&result);
-    }
-
-    #[test]
     fn test_sudoku_generation() {
         let sudoku = generate_random_sudoku();
         print_as_sudoku(&sudoku);
